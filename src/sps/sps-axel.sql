@@ -2,7 +2,7 @@
 
 
 
-
+--Axel
 
 
 -- PROCEDIMIENTOS ALMACENADOS 
@@ -152,23 +152,9 @@ EXEC sp_crear_editar_pelicula
 
 
 EXEC sp_crear_editar_pelicula
-    @pelicula_id = 1, -- ID de la película que deseas actualizar
+    @pelicula_id = 1, 
     @titulo = 'Matrix Reloaded',
     @sinopsis = 'Segunda parte de la saga Matrix.',
     @duracion = 138,
     @pais_origen = 'EE.UU.',
     @imagen_url = 'https://ejemplo.com/matrix2.jpg';
-
-
-
-
-
-
-
-
-
-
-
-
-
-
