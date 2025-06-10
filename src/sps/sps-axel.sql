@@ -7,8 +7,8 @@
 
 -- PROCEDIMIENTOS ALMACENADOS 
 
--- 1. Registrar la compra de un asiento para una pelÌcula
-CREATE PROCEDURE sp_registrar_compra_asiento
+-- 1. Registrar la compra de un asiento para una pel√≠cula
+ALTER PROCEDURE sp_registrar_compra_asiento
     @cliente_id INT,
     @dependiente_id INT,
     @metodo_pago_id INT,
@@ -18,24 +18,29 @@ CREATE PROCEDURE sp_registrar_compra_asiento
     @tipo_pago_o_puntos VARCHAR(75)
 AS
 BEGIN
-    DECLARE @asiento_funcion_id INT;
+    BEGIN TRY
+        DECLARE @asiento_funcion_id INT;
 
-    INSERT INTO asiento_funcion (funcion_id, asiento_id, estado)
-    VALUES (@funcion_id, @asiento_id, 'Reservado');
+        INSERT INTO asiento_funcion (funcion_id, asiento_id, estado)
+        VALUES (@funcion_id, @asiento_id, 'Reservado');
 
-    SET @asiento_funcion_id = SCOPE_IDENTITY();
+        SET @asiento_funcion_id = SCOPE_IDENTITY();
 
-    INSERT INTO compra (cliente_id, dependiente_id, metodo_pago_id, canal)
-    VALUES (@cliente_id, @dependiente_id, @metodo_pago_id, 'web');
+        INSERT INTO compra (cliente_id, dependiente_id, metodo_pago_id, canal)
+        VALUES (@cliente_id, @dependiente_id, @metodo_pago_id, 'web');
 
-    DECLARE @compra_id INT = SCOPE_IDENTITY();
+        DECLARE @compra_id INT = SCOPE_IDENTITY();
 
-    INSERT INTO tiquete (funcion_id, asiento_funcion_id, compra_id, precio, tipo_pago_o_puntos)
-    VALUES (@funcion_id, @asiento_funcion_id, @compra_id, @precio, @tipo_pago_o_puntos);
+        INSERT INTO tiquete (funcion_id, asiento_funcion_id, compra_id, precio, tipo_pago_o_puntos)
+        VALUES (@funcion_id, @asiento_funcion_id, @compra_id, @precio, @tipo_pago_o_puntos);
+    END TRY
+    BEGIN CATCH
+        RAISERROR('Error al registrar la compra del asiento.', 16, 1);
+    END CATCH
 END;
 GO
 
--- 2. PelÌculas en cartelera
+-- 2. Pel√≠culas en cartelera
 CREATE PROCEDURE sp_peliculas_en_cartelera
 AS
 BEGIN
@@ -48,7 +53,7 @@ BEGIN
 END;
 GO
 
--- 3. Peliculas con m·s ventas
+-- 3. Peliculas con m√°s ventas
 CREATE PROCEDURE sp_peliculas_mas_vendidas
 AS
 BEGIN
@@ -62,7 +67,7 @@ BEGIN
 END;
 GO
 
--- 4. Asientos disponibles para una funciÛn
+-- 4. Asientos disponibles para una funci√≥n
 CREATE PROCEDURE sp_asientos_disponibles @funcion_id INT
 AS
 BEGIN
@@ -86,7 +91,7 @@ BEGIN
 END;
 GO
 
--- 6. Crear o editar pelÌcula
+-- 6. Crear o editar pel√≠cula
 CREATE PROCEDURE sp_crear_editar_pelicula
     @pelicula_id INT = NULL,
     @titulo VARCHAR(50),
@@ -144,7 +149,7 @@ EXEC sp_bloquear_asiento_temporal
 
 EXEC sp_crear_editar_pelicula
     @titulo = 'Interestelar',
-    @sinopsis = 'Una misiÛn interestelar busca un nuevo hogar para la humanidad.',
+    @sinopsis = 'Una misi√≥n interestelar busca un nuevo hogar para la humanidad.',
     @duracion = 169,
     @pais_origen = 'EE.UU.',
     @imagen_url = 'https://ejemplo.com/interestelar.jpg';
