@@ -40,59 +40,54 @@ BEGIN
 END;
 GO
 
+
 -- 2. Películas en cartelera
-CREATE PROCEDURE sp_peliculas_en_cartelera
+ALTER PROCEDURE sp_peliculas_en_cartelera
 AS
 BEGIN
-    SELECT DISTINCT p.titulo, c.fecha_inicio, c.fecha_fin
-    FROM pelicula p
-    JOIN pelicula_funcion pf ON p.pelicula_id = pf.pelicula_id
-    JOIN funcion f ON pf.funcion_id = f.funcion_id
-    JOIN cartelera c ON f.cartelera_id = c.cartelera_id
-    WHERE GETDATE() BETWEEN c.fecha_inicio AND c.fecha_fin;
+    BEGIN TRY
+        SELECT DISTINCT p.titulo, c.fecha_inicio, c.fecha_fin
+        FROM pelicula p
+        JOIN pelicula_funcion pf ON p.pelicula_id = pf.pelicula_id
+        JOIN funcion f ON pf.funcion_id = f.funcion_id
+        JOIN cartelera c ON f.cartelera_id = c.cartelera_id
+        WHERE GETDATE() BETWEEN c.fecha_inicio AND c.fecha_fin;
+    END TRY
+    BEGIN CATCH
+        RAISERROR('Error al obtener las películas en cartelera.', 16, 1);
+    END CATCH
 END;
 GO
 
--- 3. Peliculas con más ventas
-CREATE PROCEDURE sp_peliculas_mas_vendidas
+
+
+
+-- 3. Asientos disponibles para una función
+ALTER PROCEDURE sp_asientos_disponibles @funcion_id INT
 AS
 BEGIN
-    SELECT p.titulo, COUNT(t.tiquete_id) AS cantidad_ventas
-    FROM tiquete t
-    JOIN funcion f ON t.funcion_id = f.funcion_id
-    JOIN pelicula_funcion pf ON f.funcion_id = pf.funcion_id
-    JOIN pelicula p ON pf.pelicula_id = p.pelicula_id
-    GROUP BY p.titulo
-    ORDER BY cantidad_ventas DESC;
+    BEGIN TRY
+        SELECT a.asiento_id, a.fila, a.secuencia
+        FROM asiento a
+        JOIN sala s ON a.sala_id = s.sala_id
+        JOIN funcion f ON f.sala_id = s.sala_id
+        WHERE f.funcion_id = @funcion_id
+        AND a.asiento_id NOT IN (
+            SELECT asiento_id FROM asiento_funcion WHERE funcion_id = @funcion_id AND estado = 'Reservado'
+        );
+    END TRY
+    BEGIN CATCH
+        RAISERROR('Error al obtener los asientos disponibles.', 16, 1);
+    END CATCH
 END;
 GO
 
--- 4. Asientos disponibles para una función
-CREATE PROCEDURE sp_asientos_disponibles @funcion_id INT
-AS
-BEGIN
-    SELECT a.asiento_id, a.fila, a.secuencia
-    FROM asiento a
-    JOIN sala s ON a.sala_id = s.sala_id
-    JOIN funcion f ON f.sala_id = s.sala_id
-    WHERE f.funcion_id = @funcion_id
-    AND a.asiento_id NOT IN (
-        SELECT asiento_id FROM asiento_funcion WHERE funcion_id = @funcion_id AND estado = 'Reservado'
-    );
-END;
-GO
 
--- 5. Bloquear asiento temporalmente
-CREATE PROCEDURE sp_bloquear_asiento_temporal @funcion_id INT, @asiento_id INT
-AS
-BEGIN
-    INSERT INTO asiento_funcion (funcion_id, asiento_id, estado)
-    VALUES (@funcion_id, @asiento_id, 'Bloqueado');
-END;
-GO
 
--- 6. Crear o editar película
-CREATE PROCEDURE sp_crear_editar_pelicula
+
+
+-- 4. Crear o editar película
+ALTER PROCEDURE sp_crear_editar_pelicula
     @pelicula_id INT = NULL,
     @titulo VARCHAR(50),
     @sinopsis VARCHAR(250),
@@ -101,23 +96,29 @@ CREATE PROCEDURE sp_crear_editar_pelicula
     @imagen_url VARCHAR(250)
 AS
 BEGIN
-    IF @pelicula_id IS NULL
-    BEGIN
-        INSERT INTO pelicula (titulo, sinopsis, duracion, pais_origen, imagen_url)
-        VALUES (@titulo, @sinopsis, @duracion, @pais_origen, @imagen_url);
-    END
-    ELSE
-    BEGIN
-        UPDATE pelicula
-        SET titulo = @titulo,
-            sinopsis = @sinopsis,
-            duracion = @duracion,
-            pais_origen = @pais_origen,
-            imagen_url = @imagen_url
-        WHERE pelicula_id = @pelicula_id;
-    END
+    BEGIN TRY
+        IF @pelicula_id IS NULL
+        BEGIN
+            INSERT INTO pelicula (titulo, sinopsis, duracion, pais_origen, imagen_url)
+            VALUES (@titulo, @sinopsis, @duracion, @pais_origen, @imagen_url);
+        END
+        ELSE
+        BEGIN
+            UPDATE pelicula
+            SET titulo = @titulo,
+                sinopsis = @sinopsis,
+                duracion = @duracion,
+                pais_origen = @pais_origen,
+                imagen_url = @imagen_url
+            WHERE pelicula_id = @pelicula_id;
+        END
+    END TRY
+    BEGIN CATCH
+        RAISERROR('Error al crear o editar la película.', 16, 1);
+    END CATCH
 END;
 GO
+
 
 
 
@@ -141,10 +142,6 @@ EXEC sp_peliculas_en_cartelera;
 EXEC sp_peliculas_mas_vendidas;
 
 EXEC sp_asientos_disponibles @funcion_id = 4;
-
-EXEC sp_bloquear_asiento_temporal
-    @funcion_id = 1,
-    @asiento_id = 2;
 
 
 EXEC sp_crear_editar_pelicula
