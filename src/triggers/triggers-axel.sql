@@ -4,7 +4,7 @@ go
 
 
 
--- Evita insertar un tiquete si el asiento ya est� reservado.
+-- Evita insertar un tiquete si el asiento ya está reservado.
 CREATE TRIGGER trg_prevenir_asiento_reservado
 ON tiquete
 INSTEAD OF INSERT
@@ -17,7 +17,7 @@ BEGIN
         WHERE af.estado = 'Reservado'
     )
     BEGIN
-        RAISERROR('El asiento ya est� reservado.', 16, 1);
+        RAISERROR('El asiento ya está reservado.', 16, 1);
         ROLLBACK;
     END
     ELSE
@@ -36,7 +36,7 @@ GO
 
 
 
--- Sumar puntos al cliente seg�n el monto pagado en cada tiquete.
+-- Sumar puntos al cliente según el monto pagado en cada tiquete.
 CREATE TRIGGER trg_sumar_puntos
 ON tiquete
 AFTER INSERT
@@ -55,3 +55,65 @@ BEGIN
     ) pt ON p.cliente_id = pt.cliente_id;
 END;
 GO
+
+
+
+--Para auditorias
+ CREATE TRIGGER trg_auditoria_pelicula
+ON pelicula
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @usuario NVARCHAR(50) = SUSER_SNAME();
+    DECLARE @accion NVARCHAR(20);
+    DECLARE @descripcion NVARCHAR(100);
+
+    IF EXISTS (SELECT * FROM inserted) AND EXISTS (SELECT * FROM deleted)
+    BEGIN
+        SET @accion = 'UPDATE';
+        SET @descripcion = 'Actualización en película';
+    END
+    ELSE IF EXISTS (SELECT * FROM inserted)
+    BEGIN
+        SET @accion = 'INSERT';
+        SET @descripcion = 'Inserción en película';
+    END
+    ELSE IF EXISTS (SELECT * FROM deleted)
+    BEGIN
+        SET @accion = 'DELETE';
+        SET @descripcion = 'Eliminación en película';
+    END
+
+    INSERT INTO auditoria (usuario, accion, tabla, fecha_ho…
+[7:11 PM, 11/06/2025] JhonyProgra 1: CREATE TRIGGER trg_auditoria_funcion
+ON funcion
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @usuario NVARCHAR(50) = SUSER_SNAME();
+    DECLARE @accion NVARCHAR(20);
+    DECLARE @descripcion NVARCHAR(100);
+
+    IF EXISTS (SELECT * FROM inserted) AND EXISTS (SELECT * FROM deleted)
+    BEGIN
+        SET @accion = 'UPDATE';
+        SET @descripcion = 'Actualización en función';
+    END
+    ELSE IF EXISTS (SELECT * FROM inserted)
+    BEGIN
+        SET @accion = 'INSERT';
+        SET @descripcion = 'Inserción en función';
+    END
+    ELSE IF EXISTS (SELECT * FROM deleted)
+    BEGIN
+        SET @accion = 'DELETE';
+        SET @descripcion = 'Eliminación en función';
+    END
+
+    INSERT INTO auditoria (usuario, accion, tabla, fecha_hora, descripcion)
+    VALUES (@usuario, @accion, 'funcion', GETDATE(), @descripcion);
+END;
