@@ -1,10 +1,10 @@
-use mi_cine_es_tu_cine
-go
+USE mi_cine_es_tu_cine
+GO
 
 
 
 
--- Evita insertar un tiquete si el asiento ya está reservado.
+-- 1 Evita insertar un tiquete si el asiento ya está reservado.
 CREATE TRIGGER trg_prevenir_asiento_reservado
 ON tiquete
 INSTEAD OF INSERT
@@ -32,11 +32,7 @@ GO
 
 
 
-
-
-
-
--- Sumar puntos al cliente según el monto pagado en cada tiquete.
+--2 Sumar puntos al cliente según el monto pagado en cada tiquete.
 CREATE TRIGGER trg_sumar_puntos
 ON tiquete
 AFTER INSERT
@@ -56,9 +52,9 @@ BEGIN
 END;
 GO
 
+select *from auditoria
 
-
---Para auditorias
+--3 Para auditorias de pelicula
  CREATE TRIGGER trg_auditoria_pelicula
 ON pelicula
 AFTER INSERT, UPDATE, DELETE
@@ -84,10 +80,19 @@ BEGIN
     BEGIN
         SET @accion = 'DELETE';
         SET @descripcion = 'Eliminación en película';
-    END
+    END;
 
-    INSERT INTO auditoria (usuario, accion, tabla, fecha_ho…
-[7:11 PM, 11/06/2025] JhonyProgra 1: CREATE TRIGGER trg_auditoria_funcion
+INSERT INTO auditoria (usuario, accion, tabla, fecha_hora, descripcion)
+VALUES (@usuario, @accion, 'pelicula', GETDATE(), @descripcion);
+END;
+
+GO
+
+
+
+
+--4 Auditoria para una nueva función
+CREATE TRIGGER trg_auditoria_funcion
 ON funcion
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -117,3 +122,122 @@ BEGIN
     INSERT INTO auditoria (usuario, accion, tabla, fecha_hora, descripcion)
     VALUES (@usuario, @accion, 'funcion', GETDATE(), @descripcion);
 END;
+GO
+
+
+-- 5 Auditoria para una nueva compra
+CREATE TRIGGER trg_auditoria_compra
+ON funcion
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @usuario NVARCHAR(50) = SUSER_SNAME();
+    DECLARE @accion NVARCHAR(20);
+    DECLARE @descripcion NVARCHAR(100);
+
+    IF EXISTS (SELECT * FROM inserted) AND EXISTS (SELECT * FROM deleted)
+    BEGIN
+        SET @accion = 'UPDATE';
+        SET @descripcion = 'Actualización en función';
+    END
+    ELSE IF EXISTS (SELECT * FROM inserted)
+    BEGIN
+        SET @accion = 'INSERT';
+        SET @descripcion = 'Inserción en función';
+    END
+    ELSE IF EXISTS (SELECT * FROM deleted)
+    BEGIN
+        SET @accion = 'DELETE';
+        SET @descripcion = 'Eliminación en función';
+    END
+
+    INSERT INTO auditoria (usuario, accion, tabla, fecha_hora, descripcion)
+    VALUES (@usuario, @accion, 'compra', GETDATE(), @descripcion);
+END;
+GO
+
+
+
+--6 Auditoria para ver cambios en puntos
+CREATE TRIGGER trg_auditoria_puntos
+ON funcion
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @usuario NVARCHAR(50) = SUSER_SNAME();
+    DECLARE @accion NVARCHAR(20);
+    DECLARE @descripcion NVARCHAR(100);
+
+    IF EXISTS (SELECT * FROM inserted) AND EXISTS (SELECT * FROM deleted)
+    BEGIN
+        SET @accion = 'UPDATE';
+        SET @descripcion = 'Actualización en función';
+    END
+    ELSE IF EXISTS (SELECT * FROM inserted)
+    BEGIN
+        SET @accion = 'INSERT';
+        SET @descripcion = 'Inserción en función';
+    END
+    ELSE IF EXISTS (SELECT * FROM deleted)
+    BEGIN
+        SET @accion = 'DELETE';
+        SET @descripcion = 'Eliminación en función';
+    END
+
+    INSERT INTO auditoria (usuario, accion, tabla, fecha_hora, descripcion)
+    VALUES (@usuario, @accion, 'puntos', GETDATE(), @descripcion);
+END;
+GO
+
+
+
+--7 Auditoria para ver si hay cambios en los tiqutes
+CREATE TRIGGER trg_auditoria_tiquete
+ON funcion
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @usuario NVARCHAR(50) = SUSER_SNAME();
+    DECLARE @accion NVARCHAR(20);
+    DECLARE @descripcion NVARCHAR(100);
+
+    IF EXISTS (SELECT * FROM inserted) AND EXISTS (SELECT * FROM deleted)
+    BEGIN
+        SET @accion = 'UPDATE';
+        SET @descripcion = 'Actualización en función';
+    END
+    ELSE IF EXISTS (SELECT * FROM inserted)
+    BEGIN
+        SET @accion = 'INSERT';
+        SET @descripcion = 'Inserción en función';
+    END
+    ELSE IF EXISTS (SELECT * FROM deleted)
+    BEGIN
+        SET @accion = 'DELETE';
+        SET @descripcion = 'Eliminación en función';
+    END
+
+    INSERT INTO auditoria (usuario, accion, tabla, fecha_hora, descripcion)
+    VALUES (@usuario, @accion, 'tiquete', GETDATE(), @descripcion);
+END;
+GO
+
+--8 Trigger para cambiar de estado al asiento
+CREATE TRIGGER trg_reservar_asiento
+ON tiquete
+AFTER INSERT
+AS
+BEGIN
+    UPDATE asiento_funcion
+    SET estado = 'Reservado'
+    WHERE asiento_funcion_id IN (
+        SELECT asiento_funcion_id FROM inserted
+    );
+END;
+GO
